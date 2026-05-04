@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IP Grab Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0f0f;--surface:#161616;--surface2:#1e1e1e;--border:#2a2a2a;
+  --text:#e2e2e2;--muted:#888;--faint:#444;
+  --green:#22c55e;--yellow:#eab308;--red:#ef4444;--blue:#3b82f6;
+  --accent:#00d2c8;--accent2:#0891b2;
+  --radius:8px;--font-body:'Inter',sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:var(--font-mono);font-size:1rem;color:var(--accent);font-weight:600;letter-spacing:1px}
+.logo span{color:var(--muted)}
+.header-actions{display:flex;gap:10px;align-items:center}
+.btn{padding:7px 14px;border-radius:6px;font-size:0.82rem;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#00b8af}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+/* STATS BAR */
+.stats-bar{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface)}
+.stat{flex:1;padding:12px 20px;border-right:1px solid var(--border);text-align:center}
+.stat:last-child{border-right:none}
+.stat-num{font-family:var(--font-mono);font-size:1.4rem;font-weight:600;color:var(--text)}
+.stat-num.red{color:var(--red)}.stat-num.yellow{color:var(--yellow)}.stat-num.green{color:var(--green)}
+.stat-label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+/* FILTERS */
+.filters{padding:16px 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface);border-bottom:1px solid var(--border)}
+.filter-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:6px;font-size:0.82rem;font-family:var(--font-body);width:180px}
+.filter-input:focus{outline:none;border-color:var(--accent)}
+.filter-label{font-size:0.75rem;color:var(--muted);margin-right:4px}
+select.filter-input{cursor:pointer}
+/* MAIN TABLE */
+.table-wrap{overflow-x:auto;padding:0 24px 24px}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:0.8rem}
+thead tr{background:var(--surface);border-bottom:2px solid var(--border)}
+th{padding:10px 12px;text-align:left;color:var(--muted);font-weight:500;font-size:0.72rem;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+tr:hover td{background:var(--surface)}
+.mono{font-family:var(--font-mono);font-size:0.78rem}
+/* RISK BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:600;white-space:nowrap}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.badge-yellow{background:rgba(234,179,8,.12);color:var(--yellow);border:1px solid rgba(234,179,8,.25)}
+.badge-green{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+/* TAGS */
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.68rem;margin:1px;font-family:var(--font-mono);font-weight:600}
+.tag-vpn{background:rgba(239,68,68,.18);color:#fca5a5}
+.tag-tor{background:rgba(168,85,247,.2);color:#c084fc}
+.tag-proxy{background:rgba(249,115,22,.18);color:#fdba74}
+.tag-datacenter{background:rgba(59,130,246,.15);color:#93c5fd}
+.tag-bot_ua{background:rgba(234,179,8,.15);color:#fde68a}
+.tag-burst_activity{background:rgba(239,68,68,.25);color:#fc8181}
+.tag-default{background:var(--surface2);color:var(--muted)}
+/* EXPAND ROW */
+.expand-row td{padding:0;background:var(--surface2);display:none}
+.expand-row.open td{display:table-cell}
+.expand-inner{padding:16px 20px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);
+  line-height:1.8;word-break:break-all;max-height:320px;overflow-y:auto}
+.expand-inner b{color:var(--text)}
+.expand-btn{cursor:pointer;color:var(--accent);font-size:0.75rem;border:none;background:none;padding:0}
+/* MAP LINK */
+a.map-link{color:var(--accent);text-decoration:none;font-size:0.75rem}
+a.map-link:hover{text-decoration:underline}
+/* EMPTY */
+.empty{padding:60px 24px;text-align:center;color:var(--muted)}
+.empty h3{margin-bottom:8px;color:var(--text)}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{margin-bottom:16px;color:var(--accent);font-family:var(--font-mono)}
+.modal pre{font-family:var(--font-mono);font-size:0.72rem;color:var(--text);white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.modal-close{float:right;cursor:pointer;color:var(--muted);font-size:1.2rem;background:none;border:none}
+/* SCROLL BAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* RESPONSIVE */
+@media(max-width:768px){
+  .stats-bar{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+  .stat{border-right:none}
+  th:nth-child(n+6),td:nth-child(n+6){display:none}
+  .filters{flex-direction:column;align-items:stretch}
+  .filter-input{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">OG<span>//</span>ENCRO &nbsp;IP GRAB VIEWER</div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="clearFilterBtn">Wyczyść filtry</button>
+    <button class="btn btn-primary" id="loadBtn">📂 Załaduj grabs.json</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none"/>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Wejść</div></div>
+  <div class="stat"><div class="stat-num" id="statUnique">0</div><div class="stat-label">Unikalne IP</div></div>
+  <div class="stat"><div class="stat-num red" id="statHigh">0</div><div class="stat-label">🔴 Wysokie ryzyko</div></div>
+  <div class="stat"><div class="stat-num yellow" id="statVpn">0</div><div class="stat-label">VPN / Proxy</div></div>
+  <div class="stat"><div class="stat-num" id="statBots">0</div><div class="stat-label">Boty</div></div>
+  <div class="stat"><div class="stat-num green" id="statClean">0</div><div class="stat-label">Czyste</div></div>
+</div>
+
+<div class="filters">
+  <span class="filter-label">Szukaj:</span>
+  <input class="filter-input" id="fSearch" type="text" placeholder="IP, miasto, kraj, ISP, UA..."/>
+  <span class="filter-label">Ryzyko:</span>
+  <select class="filter-input" id="fRisk">
+    <option value="">Wszystkie</option>
+    <option value="high">🔴 Wysokie (≥70)</option>
+    <option value="medium">🟡 Średnie (40-69)</option>
+    <option value="low">🟢 Niskie (&lt;40)</option>
+  </select>
+  <span class="filter-label">Tag:</span>
+  <select class="filter-input" id="fTag">
+    <option value="">Wszystkie tagi</option>
+    <option value="vpn">VPN</option>
+    <option value="tor">Tor</option>
+    <option value="proxy">Proxy</option>
+    <option value="datacenter">Datacenter</option>
+    <option value="bot_ua">Bot UA</option>
+    <option value="burst_activity">Burst</option>
+  </select>
+  <span class="filter-label">Kraj:</span>
+  <input class="filter-input" id="fCountry" type="text" placeholder="PL, NO, US..."/>
+  <span class="filter-label">Data od:</span>
+  <input class="filter-input" id="fDateFrom" type="date"/>
+  <span class="filter-label">do:</span>
+  <input class="filter-input" id="fDateTo" type="date"/>
+</div>
+
+<div class="table-wrap">
+  <div class="empty" id="emptyState">
+    <h3>Brak danych</h3>
+    <p>Kliknij „Załaduj grabs.json" żeby wczytać logi z hostingu.</p>
+  </div>
+  <table id="mainTable" style="display:none">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Czas</th>
+        <th>IP</th>
+        <th>Lokalizacja</th>
+        <th>ISP / ASN</th>
+        <th>Ryzyko</th>
+        <th>Tagi</th>
+        <th>Źródło</th>
+        <th>Akcje</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- MODAL JSON -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h3>📋 Pełny rekord</h3>
+    <pre id="modalContent"></pre>
+  </div>
+</div>
+
+<script>
+let allData = [];
+
+// === LOAD FILE ===
+document.getElementById('loadBtn').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      allData = JSON.parse(ev.target.result);
+      if (!Array.isArray(allData)) allData = [allData];
+      renderTable(allData);
+      updateStats(allData);
+    } catch(err) { alert('Błąd parsowania JSON: ' + err.message); }
+  };
+  r.readAsText(f);
+};
+
+// === BADGE ===
+function riskBadge(score){
+  if(score>=70) return `<span class="badge badge-red">🔴 ${score}</span>`;
+  if(score>=40) return `<span class="badge badge-yellow">🟡 ${score}</span>`;
+  return `<span class="badge badge-green">🟢 ${score}</span>`;
+}
+
+// === TAGS ===
+function renderTags(tags){
+  if(!tags||!tags.length) return '<span class="tag tag-default">—</span>';
+  return tags.map(t=>`<span class="tag tag-${t}">${t}</span>`).join('');
+}
+
+// === RENDER ===
+function renderTable(data){
+  const tb = document.getElementById('tableBody');
+  const tbl = document.getElementById('mainTable');
+  const emp = document.getElementById('emptyState');
+
+  if(!data.length){
+    tbl.style.display='none'; emp.style.display='block'; return;
+  }
+  tbl.style.display='table'; emp.style.display='none';
+  tb.innerHTML='';
+
+  data.forEach((e,i)=>{
+    const score = e.risk_score ?? 0;
+    const loc   = [e.city,e.country].filter(Boolean).join(', ') || '—';
+    const isp   = `${e.isp||'—'}<br><span style="color:var(--muted);font-size:.7rem">${e.asn||''}</span>`;
+    const src   = e.traffic_source || 'direct';
+    const map   = e.map_link ? `<a class="map-link" href="${e.map_link}" target="_blank">🗺</a>` : '';
+
+    const mainRow = document.createElement('tr');
+    mainRow.style.cursor='pointer';
+    mainRow.innerHTML = `
+      <td><button class="expand-btn" data-idx="${i}">▶</button></td>
+      <td class="mono" style="white-space:nowrap">${e.timestamp||'—'}</td>
+      <td class="mono">${e.ip||'—'}${e.hostname?`<br><span style="color:var(--muted);font-size:.68rem">${e.hostname}</span>`:''}</td>
+      <td>${loc} ${map}</td>
+      <td style="font-size:.75rem">${isp}</td>
+      <td>${riskBadge(score)}</td>
+      <td>${renderTags(e.tags)}</td>
+      <td><span class="tag tag-default">${src}</span></td>
+      <td><button class="btn btn-ghost" style="font-size:.7rem;padding:3px 8px" data-view="${i}">JSON</button></td>
+    `;
+    tb.appendChild(mainRow);
+
+    // expand row
+    const expRow = document.createElement('tr');
+    expRow.className='expand-row';
+    expRow.id=`expand-${i}`;
+    expRow.innerHTML=`<td colspan="9"><div class="expand-inner">
+      <b>Powód:</b> ${e.suspicion_reason||'—'}<br>
+      <b>Session hash:</b> ${e.session_hash||'—'}<br>
+      <b>Referer:</b> ${e.referer||'—'}<br>
+      <b>UA:</b> ${e.user_agent||'—'}<br>
+      <b>sec-ch-ua:</b> ${e.sec_ch_ua||'—'}<br>
+      <b>sec-fetch-site:</b> ${e.sec_fetch_site||'—'} &nbsp; <b>mode:</b> ${e.sec_fetch_mode||'—'}<br>
+      <b>DNT:</b> ${e.dnt||'—'}&nbsp;<b>Language:</b> ${e.accept_language||'—'}<br>
+      <b>Burst:</b> ${e.burst_activity?'⚡ TAK':'NIE'}
+    </div></td>`;
+    tb.appendChild(expRow);
+  });
+
+  // Expand buttons
+  document.querySelectorAll('.expand-btn').forEach(btn=>{
+    btn.onclick = ev=>{
+      ev.stopPropagation();
+      const i = btn.dataset.idx;
+      const row = document.getElementById(`expand-${i}`);
+      const open = row.classList.toggle('open');
+      btn.textContent = open ? '▼' : '▶';
+    };
+  });
+
+  // JSON view
+  document.querySelectorAll('[data-view]').forEach(btn=>{
+    btn.onclick = ev=>{
+      ev.stopPropagation();
+      const e = data[+btn.dataset.view];
+      document.getElementById('modalContent').textContent = JSON.stringify(e, null, 2);
+      document.getElementById('modalOverlay').classList.add('open');
+    };
+  });
+}
+
+// === STATS ===
+function updateStats(data){
+  const ips     = new Set(data.map(e=>e.ip));
+  const high    = data.filter(e=>(e.risk_score??0)>=70).length;
+  const vpn     = data.filter(e=>(e.tags||[]).some(t=>['vpn','proxy','tor'].includes(t))).length;
+  const bots    = data.filter(e=>(e.tags||[]).includes('bot_ua')).length;
+  const clean   = data.filter(e=>(e.risk_score??0)<40).length;
+  document.getElementById('statTotal').textContent  = data.length;
+  document.getElementById('statUnique').textContent = ips.size;
+  document.getElementById('statHigh').textContent   = high;
+  document.getElementById('statVpn').textContent    = vpn;
+  document.getElementById('statBots').textContent   = bots;
+  document.getElementById('statClean').textContent  = clean;
+}
+
+// === FILTERS ===
+function applyFilters(){
+  const search  = document.getElementById('fSearch').value.toLowerCase();
+  const risk    = document.getElementById('fRisk').value;
+  const tag     = document.getElementById('fTag').value;
+  const country = document.getElementById('fCountry').value.toUpperCase().trim();
+  const dateFrom= document.getElementById('fDateFrom').value;
+  const dateTo  = document.getElementById('fDateTo').value;
+
+  const filtered = allData.filter(e=>{
+    if(search && !JSON.stringify(e).toLowerCase().includes(search)) return false;
+    const s = e.risk_score??0;
+    if(risk==='high' && s<70) return false;
+    if(risk==='medium' && (s<40||s>=70)) return false;
+    if(risk==='low' && s>=40) return false;
+    if(tag && !(e.tags||[]).includes(tag)) return false;
+    if(country && (e.country||'').toUpperCase()!==country) return false;
+    if(dateFrom && (e.timestamp||'')<dateFrom) return false;
+    if(dateTo && (e.timestamp||'')>(dateTo+' 23:59:59')) return false;
+    return true;
+  });
+
+  renderTable(filtered);
+  updateStats(filtered);
+}
+
+['fSearch','fRisk','fTag','fCountry','fDateFrom','fDateTo'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', applyFilters);
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+document.getElementById('clearFilterBtn').onclick=()=>{
+  ['fSearch','fCountry','fDateFrom','fDateTo'].forEach(id=>document.getElementById(id).value='');
+  ['fRisk','fTag'].forEach(id=>document.getElementById(id).selectedIndex=0);
+  renderTable(allData); updateStats(allData);
+};
+
+// Modal
+document.getElementById('modalClose').onclick=()=>document.getElementById('modalOverlay').classList.remove('open');
+document.getElementById('modalOverlay').onclick=e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open')};
+</script>
+</body>
+</html>
